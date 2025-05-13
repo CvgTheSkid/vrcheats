@@ -1,145 +1,134 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CVSITE - Mod Uploader</title>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <title>CVModding</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #210aa5; color: #fff; }
-    input, button, textarea { padding: 8px; margin: 4px; }
-    .mod { border: 1px solid #20ce10; padding: 10px; margin: 10px 0; }
-    .container { max-width: 800px; margin: 0 auto; }
-    h2 { text-align: center; }
-    #upload { display: none; }
+    body {
+      background-color: #0b0b0b;
+      color: #ff4c4c;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+
+    .discord-link {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background-color: #ff4c4c;
+      color: black;
+      padding: 10px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      border: none;
+      border-radius: 4px;
+      background-color: #1c1c1c;
+      color: #ff4c4c;
+    }
+
+    .mod-box {
+      border: 1px solid #ff4c4c;
+      margin: 10px auto;
+      padding: 10px;
+      width: 50%;
+      background-color: #1a1a1a;
+    }
+
+    a {
+      color: #ff4c4c;
+    }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <h2>Welcome to CVmodding</h2>
-  <p>Upload your favorite mods and share them with others Sign up or log in to get started.</p>
+<a href="https://discord.gg/YOUR_SERVER" class="discord-link" target="_blank">Join Discord</a>
 
-  <!-- Auth Section -->
-  <div id="auth">
-    <input id="email" placeholder="Email"><br>
-    <input id="password" type="password" placeholder="Password"><br>
-    <button onclick="signUp()">Sign Up</button>
-    <button onclick="signIn()">Log In</button>
-    <button onclick="signOut()">Log Out</button>
-  </div>
+<h1>Welcome to CVModding</h1>
+<p>Upload your favorite APKs and share them with the world!</p>
 
-  <!-- Upload Section -->
-  <div id="upload" style="display:none;">
-    <h3>Submit a Mod</h3>
-    <input id="modName" placeholder="Mod Name"><br>
-    <input id="modLink" placeholder="GoFile or Download Link"><br>
-    <textarea id="modDesc" placeholder="Short description" rows="3" cols="40"></textarea><br>
-    <button onclick="submitMod()">Submit Mod</button>
-  </div>
+<!-- Upload Form -->
+<input type="text" id="title" placeholder="Mod Title">
+<br>
+<input type="text" id="desc" placeholder="Mod Description">
+<br>
+<input type="file" id="fileInput">
+<br>
+<button onclick="uploadMod()">Upload Mod</button>
 
-  <!-- Mod List -->
-  <h3>Uploaded Mods</h3>
-  <div id="modsList"></div>
-</div>
+<h2>Uploaded Mods</h2>
+<div id="modsList"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
 
 <script>
-  // Firebase configuration
+  // Your Firebase config
   const firebaseConfig = {
-    apiKey: "AIzaSyBtGwQeKlQCQpTv8Lzav7djmka6YQMIORI",
-    authDomain: "cvsite-fe8b5.firebaseapp.com",
-    projectId: "cvsite-fe8b5",
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
   };
 
-  // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.firestore();
+  const db = firebase.database();
+  const storage = firebase.storage();
 
-  let currentUserRole = "viewer"; // Default role
+  function uploadMod() {
+    const file = document.getElementById('fileInput').files[0];
+    const title = document.getElementById('title').value;
+    const desc = document.getElementById('desc').value;
 
-  // Authentication Functions
-  function signUp() {
-    const nickname = prompt("Enter your nickname:"); // Get nickname
+    if (!file) return alert("Select a file!");
 
-    auth.createUserWithEmailAndPassword(email.value, password.value)
-      .then(() => {
-        alert("Signed up!");
-        // Store user role and nickname in Firestore
-        db.collection("roles").doc(email.value).set({ 
-          role: "viewer", 
-          nickname: nickname || "Guest"
-        });
-      })
-      .catch(error => alert(error.message));
+    const storageRef = storage.ref('mods/' + file.name);
+    storageRef.put(file).then(snapshot => {
+      return snapshot.ref.getDownloadURL();
+    }).then(downloadURL => {
+      return db.ref('mods').push({
+        title: title,
+        description: desc,
+        nickname: "Anonymous",
+        downloadURL: downloadURL
+      });
+    }).then(() => {
+      alert("Uploaded!");
+      location.reload();
+    }).catch(console.error);
   }
 
-  function signIn() {
-    auth.signInWithEmailAndPassword(email.value, password.value)
-      .then(() => alert("Logged in!"))
-      .catch(error => alert(error.message));
-  }
+  function loadMods() {
+    db.ref('mods').once('value').then(snapshot => {
+      const mods = snapshot.val();
+      const container = document.getElementById('modsList');
+      container.innerHTML = "";
 
-  function signOut() {
-    auth.signOut()
-      .then(() => alert("Logged out"))
-      .catch(error => alert(error.message));
-  }
-
-  // Monitor Auth State
-  auth.onAuthStateChanged(async user => {
-    if (user) {
-      // Get user's role and nickname from Firestore
-      const doc = await db.collection("roles").doc(user.email).get();
-      currentUserRole = doc.exists ? doc.data().role : "viewer";
-      const nickname = doc.exists ? doc.data().nickname : "Guest";
-
-      // Show mod upload form for admins and uploaders
-      upload.style.display = (currentUserRole === "admin" || currentUserRole === "uploader") ? "block" : "none";
-      
-      // Set the global nickname
-      window.currentNickname = nickname;
-    } else {
-      upload.style.display = "none"; // Hide upload form if not logged in
-    }
-  });
-
-  // Submit Mod Function
-  function submitMod() {
-    const mod = {
-      name: modName.value,
-      link: modLink.value,
-      desc: modDesc.value,
-      uploader: window.currentNickname, // Display nickname
-      time: new Date().toISOString()
-    };
-
-    // Add mod data to Firestore
-    db.collection("mods").add(mod)
-      .then(() => {
-        alert("Mod submitted!");
-        modName.value = modLink.value = modDesc.value = ""; // Reset fields
-      })
-      .catch(error => alert(error.message));
-  }
-
-  // Display Mods
-  db.collection("mods").orderBy("time", "desc").onSnapshot(snapshot => {
-    modsList.innerHTML = ""; // Clear the list
-    snapshot.forEach(doc => {
-      const mod = doc.data();
-      modsList.innerHTML += `
-        <div class="mod">
-          <strong>${mod.name}</strong><br>
-          <small>By: ${mod.uploader}</small><br>
-          <p>${mod.desc || ""}</p>
-          <a href="${mod.link}" target="_blank">Download</a> <!-- Download button -->
-        </div>
-      `;
+      for (const key in mods) {
+        const mod = mods[key];
+        const div = document.createElement('div');
+        div.className = 'mod-box';
+        div.innerHTML = `
+          <strong>${mod.title}</strong><br>
+          <em>By: ${mod.nickname}</em><br>
+          <p>${mod.description}</p>
+          <a href="${mod.downloadURL}" target="_blank">Download</a>
+        `;
+        container.appendChild(div);
+      }
     });
-  });
+  }
+
+  loadMods();
 </script>
 
 </body>
