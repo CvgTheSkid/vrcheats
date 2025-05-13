@@ -42,14 +42,28 @@
     a {
       color: #ff4c4c;
     }
+
+    .auth-box {
+      margin-bottom: 30px;
+    }
   </style>
 </head>
 <body>
 
-<a href="https://discord.gg/YOUR_SERVER" class="discord-link" target="_blank">Join Discord</a>
+<a href="https://discord.gg/X4nSTeBXqX" class="discord-link" target="_blank">Join Discord</a>
 
 <h1>Welcome to CVModding</h1>
-<p>Upload your favorite APKs and share them with the world!</p>
+<p>Upload your favorite APKs and share them with others!</p>
+
+<!-- Login/Register -->
+<div class="auth-box">
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
+  <br>
+  <button onclick="signUp()">Sign Up</button>
+  <button onclick="logIn()">Log In</button>
+  <button onclick="logOut()">Log Out</button>
+</div>
 
 <!-- Upload Form -->
 <input type="text" id="title" placeholder="Mod Title">
@@ -63,47 +77,81 @@
 <h2>Uploaded Mods</h2>
 <div id="modsList"></div>
 
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
 
 <script>
-  // Your Firebase config
   const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyBtGwQeKlQCQpTv8Lzav7djmka6YQMIORI",
+    authDomain: "cvsite-fe8b5.firebaseapp.com",
+    databaseURL: "https://cvsite-fe8b5-default-rtdb.firebaseio.com",
+    projectId: "cvsite-fe8b5",
+    storageBucket: "cvsite-fe8b5.appspot.com",
+    messagingSenderId: "904223570661",
+    appId: "1:904223570661:web"
   };
 
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
   const storage = firebase.storage();
+  const auth = firebase.auth();
+
+  let currentUser = null;
+
+  auth.onAuthStateChanged(user => {
+    currentUser = user;
+    if (user) {
+      console.log("Logged in as:", user.email);
+    } else {
+      console.log("Logged out");
+    }
+  });
+
+  function signUp() {
+    const email = document.getElementById("email").value;
+    const pass = document.getElementById("password").value;
+    auth.createUserWithEmailAndPassword(email, pass)
+      .then(() => alert("Signed up!"))
+      .catch(err => alert(err.message));
+  }
+
+  function logIn() {
+    const email = document.getElementById("email").value;
+    const pass = document.getElementById("password").value;
+    auth.signInWithEmailAndPassword(email, pass)
+      .then(() => alert("Logged in!"))
+      .catch(err => alert(err.message));
+  }
+
+  function logOut() {
+    auth.signOut().then(() => alert("Logged out!"));
+  }
 
   function uploadMod() {
     const file = document.getElementById('fileInput').files[0];
     const title = document.getElementById('title').value;
     const desc = document.getElementById('desc').value;
 
-    if (!file) return alert("Select a file!");
+    if (!file || !title) return alert("Please complete all fields");
 
+    const nickname = currentUser ? currentUser.email.split('@')[0] : 'Anonymous';
     const storageRef = storage.ref('mods/' + file.name);
+
     storageRef.put(file).then(snapshot => {
       return snapshot.ref.getDownloadURL();
     }).then(downloadURL => {
       return db.ref('mods').push({
         title: title,
         description: desc,
-        nickname: "Anonymous",
+        nickname: nickname,
         downloadURL: downloadURL
       });
     }).then(() => {
-      alert("Uploaded!");
-      location.reload();
+      alert("Mod uploaded!");
+      loadMods();
     }).catch(console.error);
   }
 
