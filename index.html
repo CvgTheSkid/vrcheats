@@ -1,4 +1,48 @@
-<!-- ...same head and body as before -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CVSITE - Mod Uploader</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; background: #111; color: #fff; }
+    input, button, textarea { padding: 8px; margin: 4px; }
+    .mod { border: 1px solid #444; padding: 10px; margin: 10px 0; }
+    .container { max-width: 800px; margin: 0 auto; }
+    h2 { text-align: center; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Welcome to CVSITE</h2>
+  <p>Upload your favorite mods and share them with others! Sign up or log in to get started.</p>
+
+  <!-- Auth Section -->
+  <div id="auth">
+    <input id="email" placeholder="Email"><br>
+    <input id="password" type="password" placeholder="Password"><br>
+    <button onclick="signUp()">Sign Up</button>
+    <button onclick="signIn()">Log In</button>
+    <button onclick="signOut()">Log Out</button>
+  </div>
+
+  <!-- Upload Section -->
+  <div id="upload" style="display:none;">
+    <h3>Submit a Mod</h3>
+    <input id="modName" placeholder="Mod Name"><br>
+    <input id="modLink" placeholder="GoFile or Download Link"><br>
+    <textarea id="modDesc" placeholder="Short description" rows="3" cols="40"></textarea><br>
+    <button onclick="submitMod()">Submit Mod</button>
+  </div>
+
+  <!-- Mod List -->
+  <h3>Uploaded Mods</h3>
+  <div id="modsList"></div>
+</div>
 
 <script>
   const firebaseConfig = {
@@ -86,3 +130,6 @@
     });
   });
 </script>
+
+</body>
+</html>
