@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CVSITE - Mod Uploader</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; background: #111; color: #fff; }
+    input, button { padding: 8px; margin: 4px; }
+    .mod { border: 1px solid #444; padding: 10px; margin: 10px 0; }
+  </style>
+</head>
+<body>
+
+<h2>CVSITE - Mod Upload & Viewer</h2>
+
+<!-- Auth Section -->
+<div id="auth">
+  <input id="email" placeholder="Email"><br>
+  <input id="password" type="password" placeholder="Password"><br>
+  <button onclick="signUp()">Sign Up</button>
+  <button onclick="signIn()">Log In</button>
+  <button onclick="signOut()">Log Out</button>
+</div>
+
+<!-- Upload Section -->
+<div id="upload" style="display:none;">
+  <h3>Submit a Mod</h3>
+  <input id="modName" placeholder="Mod Name"><br>
+  <input id="modLink" placeholder="GoFile or Download Link"><br>
+  <textarea id="modDesc" placeholder="Short description" rows="3" cols="40"></textarea><br>
+  <button onclick="submitMod()">Submit Mod</button>
+</div>
+
+<!-- Mod List -->
+<h3>Uploaded Mods</h3>
+<div id="modsList"></div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBtGwQeKlQCQpTv8Lzav7djmka6YQMIORI",
+    authDomain: "cvsite-fe8b5.firebaseapp.com",
+    projectId: "cvsite-fe8b5",
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  // Auth functions
+  function signUp() {
+    auth.createUserWithEmailAndPassword(
+      email.value, password.value
+    ).then(() => alert("Signed up!"));
+  }
+
+  function signIn() {
+    auth.signInWithEmailAndPassword(
+      email.value, password.value
+    ).then(() => alert("Logged in!"));
+  }
+
+  function signOut() {
+    auth.signOut().then(() => alert("Logged out"));
+  }
+
+  // Auth state
+  auth.onAuthStateChanged(user => {
+    upload.style.display = user ? "block" : "none";
+  });
+
+  // Submit mod
+  function submitMod() {
+    const mod = {
+      name: modName.value,
+      link: modLink.value,
+      desc: modDesc.value,
+      uploader: auth.currentUser.email,
+      time: new Date().toISOString()
+    };
+    db.collection("mods").add(mod).then(() => {
+      alert("Mod submitted!");
+      modName.value = modLink.value = modDesc.value = "";
+    });
+  }
+
+  // Load mod list
+  db.collection("mods").orderBy("time", "desc").onSnapshot(snapshot => {
+    modsList.innerHTML = "";
+    snapshot.forEach(doc => {
+      const mod = doc.data();
+      modsList.innerHTML += `
+        <div class="mod">
+          <strong>${mod.name}</strong><br>
+          <small>By: ${mod.uploader}</small><br>
+          <p>${mod.desc || ""}</p>
+          <a href="${mod.link}" target="_blank">Download</a>
+        </div>
+      `;
+    });
+  });
+</script>
+
+</body>
+</html>
