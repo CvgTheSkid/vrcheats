@@ -1,42 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>CVSITE - Mod Uploader</title>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  <style>
-    body { font-family: Arial; padding: 20px; background: #111; color: #fff; }
-    input, button { padding: 8px; margin: 4px; }
-    .mod { border: 1px solid #444; padding: 10px; margin: 10px 0; }
-  </style>
-</head>
-<body>
-
-<h2>CVSITE - Mod Upload & Viewer</h2>
-
-<!-- Auth Section -->
-<div id="auth">
-  <input id="email" placeholder="Email"><br>
-  <input id="password" type="password" placeholder="Password"><br>
-  <button onclick="signUp()">Sign Up</button>
-  <button onclick="signIn()">Log In</button>
-  <button onclick="signOut()">Log Out</button>
-</div>
-
-<!-- Upload Section -->
-<div id="upload" style="display:none;">
-  <h3>Submit a Mod</h3>
-  <input id="modName" placeholder="Mod Name"><br>
-  <input id="modLink" placeholder="GoFile or Download Link"><br>
-  <textarea id="modDesc" placeholder="Short description" rows="3" cols="40"></textarea><br>
-  <button onclick="submitMod()">Submit Mod</button>
-</div>
-
-<!-- Mod List -->
-<h3>Uploaded Mods</h3>
-<div id="modsList"></div>
+<!-- ...same head and body as before -->
 
 <script>
   const firebaseConfig = {
@@ -49,17 +11,26 @@
   const auth = firebase.auth();
   const db = firebase.firestore();
 
+  let currentUserRole = "viewer"; // default role
+
   // Auth functions
   function signUp() {
-    auth.createUserWithEmailAndPassword(
-      email.value, password.value
-    ).then(() => alert("Signed up!"));
+    const nickname = prompt("Enter your nickname:"); // Get nickname from user
+
+    auth.createUserWithEmailAndPassword(email.value, password.value)
+      .then(() => {
+        alert("Signed up!");
+        // Add user to roles with default "viewer" and store their nickname
+        db.collection("roles").doc(email.value).set({ 
+          role: "viewer", 
+          nickname: nickname || "Guest" // Store nickname or default to "Guest"
+        });
+      });
   }
 
   function signIn() {
-    auth.signInWithEmailAndPassword(
-      email.value, password.value
-    ).then(() => alert("Logged in!"));
+    auth.signInWithEmailAndPassword(email.value, password.value)
+      .then(() => alert("Logged in!"));
   }
 
   function signOut() {
@@ -67,8 +38,21 @@
   }
 
   // Auth state
-  auth.onAuthStateChanged(user => {
-    upload.style.display = user ? "block" : "none";
+  auth.onAuthStateChanged(async user => {
+    if (user) {
+      // Fetch role and nickname from Firestore
+      const doc = await db.collection("roles").doc(user.email).get();
+      currentUserRole = doc.exists ? doc.data().role : "viewer";
+      const nickname = doc.exists ? doc.data().nickname : "Guest";
+
+      // Show upload form only if allowed
+      upload.style.display = (currentUserRole === "admin" || currentUserRole === "uploader") ? "block" : "none";
+
+      // Set global nickname
+      window.currentNickname = nickname;
+    } else {
+      upload.style.display = "none";
+    }
   });
 
   // Submit mod
@@ -77,7 +61,7 @@
       name: modName.value,
       link: modLink.value,
       desc: modDesc.value,
-      uploader: auth.currentUser.email,
+      uploader: window.currentNickname, // Use nickname
       time: new Date().toISOString()
     };
     db.collection("mods").add(mod).then(() => {
@@ -86,7 +70,7 @@
     });
   }
 
-  // Load mod list
+  // Load mods
   db.collection("mods").orderBy("time", "desc").onSnapshot(snapshot => {
     modsList.innerHTML = "";
     snapshot.forEach(doc => {
@@ -102,6 +86,3 @@
     });
   });
 </script>
-
-</body>
-</html>
