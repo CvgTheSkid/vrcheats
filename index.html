@@ -1,183 +1,175 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>CVModding</title>
   <style>
     body {
-      background-color: #0b0b0b;
-      color: #ff4c4c;
+      background-color: #0d0d0d;
+      color: #ff1a1a;
       font-family: Arial, sans-serif;
+      padding: 30px;
       text-align: center;
     }
-
-    .discord-link {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      background-color: #ff4c4c;
-      color: black;
-      padding: 10px;
-      border-radius: 6px;
-      text-decoration: none;
-      font-weight: bold;
-    }
-
     input, button {
       padding: 10px;
       margin: 5px;
-      border: none;
-      border-radius: 4px;
-      background-color: #1c1c1c;
-      color: #ff4c4c;
+      background-color: #1a1a1a;
+      color: #ff1a1a;
+      border: 1px solid #ff1a1a;
     }
-
     .mod-box {
-      border: 1px solid #ff4c4c;
+      border: 1px solid #ff1a1a;
       margin: 10px auto;
       padding: 10px;
-      width: 50%;
-      background-color: #1a1a1a;
+      width: 300px;
     }
-
-    a {
-      color: #ff4c4c;
+    #uploadForm {
+      margin-top: 20px;
     }
-
-    .auth-box {
-      margin-bottom: 30px;
+    .discord-link {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      color: #ff1a1a;
+      text-decoration: none;
     }
   </style>
 </head>
 <body>
 
-<a href="https://discord.gg/X4nSTeBXqX" class="discord-link" target="_blank">Join Discord</a>
+  <a href="https://discord.gg/X4nSTeBXqX" target="_blank" class="discord-link">Join our Discord</a>
 
-<h1>Welcome to CVModding</h1>
-<p>Upload your favorite APKs and share them with others!</p>
+  <h1>Welcome to CVModding</h1>
+  <p>Upload your favorite mods and share them with others. Sign up or log in to get started.</p>
 
-<!-- Login/Register -->
-<div class="auth-box">
   <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Password">
-  <br>
-  <button onclick="signUp()">Sign Up</button>
-  <button onclick="logIn()">Log In</button>
-  <button onclick="logOut()">Log Out</button>
-</div>
+  <input type="password" id="password" placeholder="Password"><br/>
+  <button id="signup-btn">Sign Up</button>
+  <button id="login-btn">Log In</button>
+  <button id="logout-btn">Log Out</button>
 
-<!-- Upload Form -->
-<input type="text" id="title" placeholder="Mod Title">
-<br>
-<input type="text" id="desc" placeholder="Mod Description">
-<br>
-<input type="file" id="fileInput">
-<br>
-<button onclick="uploadMod()">Upload Mod</button>
+  <div id="uploadForm" style="display:none;">
+    <h3>Upload a Mod</h3>
+    <input type="text" id="nickname" placeholder="Your Nickname"><br/>
+    <input type="text" id="modName" placeholder="Mod Name"><br/>
+    <input type="text" id="modDesc" placeholder="Description"><br/>
+    <input type="file" id="modFile"><br/>
+    <button id="uploadBtn">Upload</button>
+  </div>
 
-<h2>Uploaded Mods</h2>
-<div id="modsList"></div>
+  <h2>Uploaded Mods</h2>
+  <div id="modList"></div>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import {
+      getStorage,
+      ref,
+      uploadBytes,
+      getDownloadURL
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      getDocs
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyBtGwQeKlQCQpTv8Lzav7djmka6YQMIORI",
-    authDomain: "cvsite-fe8b5.firebaseapp.com",
-    databaseURL: "https://cvsite-fe8b5-default-rtdb.firebaseio.com",
-    projectId: "cvsite-fe8b5",
-    storageBucket: "cvsite-fe8b5.appspot.com",
-    messagingSenderId: "904223570661",
-    appId: "1:904223570661:web"
-  };
+    const firebaseConfig = {
+      apiKey: "AIzaSyBtGwQeKlQCQpTv8Lzav7djmka6YQMIORI",
+      authDomain: "cvsite-fe8b5.firebaseapp.com",
+      projectId: "cvsite-fe8b5",
+      storageBucket: "cvsite-fe8b5.appspot.com",
+      messagingSenderId: "904223570661",
+      appId: "1:904223570661:web:your-app-id" // optional
+    };
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-  const storage = firebase.storage();
-  const auth = firebase.auth();
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
 
-  let currentUser = null;
+    const signupBtn = document.getElementById("signup-btn");
+    const loginBtn = document.getElementById("login-btn");
+    const logoutBtn = document.getElementById("logout-btn");
+    const uploadForm = document.getElementById("uploadForm");
 
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-    if (user) {
-      console.log("Logged in as:", user.email);
-    } else {
-      console.log("Logged out");
-    }
-  });
+    signupBtn.onclick = () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      createUserWithEmailAndPassword(auth, email, password)
+        .then(() => alert("Signed up!"))
+        .catch(e => alert(e.message));
+    };
 
-  function signUp() {
-    const email = document.getElementById("email").value;
-    const pass = document.getElementById("password").value;
-    auth.createUserWithEmailAndPassword(email, pass)
-      .then(() => alert("Signed up!"))
-      .catch(err => alert(err.message));
-  }
+    loginBtn.onclick = () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      signInWithEmailAndPassword(auth, email, password)
+        .then(() => alert("Logged in!"))
+        .catch(e => alert(e.message));
+    };
 
-  function logIn() {
-    const email = document.getElementById("email").value;
-    const pass = document.getElementById("password").value;
-    auth.signInWithEmailAndPassword(email, pass)
-      .then(() => alert("Logged in!"))
-      .catch(err => alert(err.message));
-  }
+    logoutBtn.onclick = () => {
+      signOut(auth)
+        .then(() => alert("Logged out"))
+        .catch(e => alert(e.message));
+    };
 
-  function logOut() {
-    auth.signOut().then(() => alert("Logged out!"));
-  }
-
-  function uploadMod() {
-    const file = document.getElementById('fileInput').files[0];
-    const title = document.getElementById('title').value;
-    const desc = document.getElementById('desc').value;
-
-    if (!file || !title) return alert("Please complete all fields");
-
-    const nickname = currentUser ? currentUser.email.split('@')[0] : 'Anonymous';
-    const storageRef = storage.ref('mods/' + file.name);
-
-    storageRef.put(file).then(snapshot => {
-      return snapshot.ref.getDownloadURL();
-    }).then(downloadURL => {
-      return db.ref('mods').push({
-        title: title,
-        description: desc,
-        nickname: nickname,
-        downloadURL: downloadURL
-      });
-    }).then(() => {
-      alert("Mod uploaded!");
-      loadMods();
-    }).catch(console.error);
-  }
-
-  function loadMods() {
-    db.ref('mods').once('value').then(snapshot => {
-      const mods = snapshot.val();
-      const container = document.getElementById('modsList');
-      container.innerHTML = "";
-
-      for (const key in mods) {
-        const mod = mods[key];
-        const div = document.createElement('div');
-        div.className = 'mod-box';
-        div.innerHTML = `
-          <strong>${mod.title}</strong><br>
-          <em>By: ${mod.nickname}</em><br>
-          <p>${mod.description}</p>
-          <a href="${mod.downloadURL}" target="_blank">Download</a>
-        `;
-        container.appendChild(div);
-      }
+    onAuthStateChanged(auth, user => {
+      uploadForm.style.display = user ? "block" : "none";
     });
-  }
 
-  loadMods();
-</script>
+    document.getElementById("uploadBtn").onclick = async () => {
+      const modName = document.getElementById("modName").value;
+      const modDesc = document.getElementById("modDesc").value;
+      const nickname = document.getElementById("nickname").value;
+      const file = document.getElementById("modFile").files[0];
+      if (!file || !modName || !nickname) return alert("Fill all fields!");
 
+      const fileRef = ref(storage, 'mods/' + file.name);
+      await uploadBytes(fileRef, file);
+      const url = await getDownloadURL(fileRef);
+
+      await addDoc(collection(db, "mods"), {
+        name: modName,
+        desc: modDesc,
+        url: url,
+        nickname: nickname
+      });
+
+      alert("Uploaded!");
+      loadMods();
+    };
+
+    async function loadMods() {
+      const modList = document.getElementById("modList");
+      modList.innerHTML = "";
+      const querySnapshot = await getDocs(collection(db, "mods"));
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        const div = document.createElement("div");
+        div.className = "mod-box";
+        div.innerHTML = `
+          <strong>${data.name}</strong><br/>
+          By: ${data.nickname}<br/>
+          <p>${data.desc}</p>
+          <a href="${data.url}" target="_blank" style="color: #ff1a1a;">Download</a>
+        `;
+        modList.appendChild(div);
+      });
+    }
+
+    loadMods();
+  </script>
 </body>
 </html>
