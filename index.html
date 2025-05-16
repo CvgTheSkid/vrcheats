@@ -1,173 +1,174 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>GOMOD</title>
+  <title>GOMOD by cvg</title>
   <style>
     body {
-      background-color: #0d0d0d;
-      color: #ff1a1a;
+      background-color: #3b0066;
+      color: white;
       font-family: Arial, sans-serif;
       text-align: center;
-      padding: 20px;
     }
+
     input, button, textarea {
       margin: 5px;
       padding: 10px;
-      background-color: #1a1a1a;
-      border: 1px solid #ff1a1a;
-      color: #ff1a1a;
-      width: 250px;
+      border: none;
+      border-radius: 4px;
     }
-    .mod-box {
-      border: 1px solid #ff1a1a;
-      background: #1a1a1a;
-      margin: 15px auto;
-      padding: 10px;
-      width: 300px;
-    }
-    #uploadForm {
-      display: none;
+
+    #mods {
       margin-top: 20px;
     }
-    .discord-link {
+
+    .mod {
+      border: 1px solid white;
+      padding: 10px;
+      margin: 10px;
+      background-color: #520080;
+    }
+
+    #discord-link {
       position: absolute;
       top: 10px;
       right: 10px;
-      color: #ff1a1a;
-      text-decoration: none;
-      font-weight: bold;
+    }
+
+    a {
+      color: white;
     }
   </style>
 </head>
 <body>
-
-  <a href="https://discord.gg/X4nSTeBXqX" target="_blank" class="discord-link">Discord</a>
-
+  <a href="https://discord.gg/X4nSTeBXqX" target="_blank" id="discord-link">Join Discord</a>
   <h1>Welcome to GOMOD</h1>
-  <p>Upload and download APKs using GoFile links</p>
 
-  <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Password"><br>
-  <button id="signup-btn">Sign Up</button>
-  <button id="login-btn">Log In</button>
-  <button id="logout-btn">Log Out</button>
-
-  <div id="uploadForm">
-    <h2>Post a GoFile APK</h2>
-    <input type="text" id="nickname" placeholder="Your Nickname"><br>
-    <input type="text" id="modName" placeholder="Mod Name"><br>
-    <textarea id="modDesc" placeholder="Description"></textarea><br>
-    <input type="text" id="gofileLink" placeholder="GoFile Link (https://gofile.io/...)"><br>
-    <button id="postBtn">Post Mod</button>
+  <div id="auth">
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <input type="text" id="nickname" placeholder="Nickname">
+    <br>
+    <button onclick="signUp()">Sign Up</button>
+    <button onclick="logIn()">Log In</button>
+    <button onclick="logOut()">Log Out</button>
   </div>
 
-  <h2>Mods:</h2>
-  <div id="modList"></div>
+  <div id="uploadForm" style="display:none;">
+    <h3>Upload a Mod</h3>
+    <input type="text" id="modName" placeholder="Mod Name"><br>
+    <textarea id="modDesc" placeholder="Mod Description"></textarea><br>
+    <input type="url" id="gofileLink" placeholder="GoFile Link"><br>
+    <button onclick="uploadMod()">Upload</button>
+  </div>
+
+  <div id="mods">
+    <h2>Uploaded Mods</h2>
+    <div id="modList"></div>
+  </div>
+
+  <!-- Firebase App (SDK) -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-    import {
-      getAuth,
-      createUserWithEmailAndPassword,
-      signInWithEmailAndPassword,
-      signOut,
-      onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
-    import {
-      getFirestore,
-      collection,
-      addDoc,
-      getDocs
-    } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
 
-    // Firebase config
     const firebaseConfig = {
-      apiKey: "AIzaSyBtGwQeKlQCQpTv8Lzav7djmka6YQMIORI",
-      authDomain: "cvsite-fe8b5.firebaseapp.com",
-      projectId: "cvsite-fe8b5",
-      storageBucket: "cvsite-fe8b5.appspot.com",
-      messagingSenderId: "904223570661",
-      appId: "1:904223570661:web:placeholder"
+      apiKey: "AIzaSyCmqJAVaGRmVSioC8XcB9FrNXBdQmCjQaI",
+      authDomain: "dsfdsdadsa-39b67.firebaseapp.com",
+      databaseURL: "https://dsfdsdadsa-39b67-default-rtdb.firebaseio.com",
+      projectId: "dsfdsdadsa-39b67",
+      storageBucket: "dsfdsdadsa-39b67.appspot.com",
+      messagingSenderId: "941363097068",
+      appId: "1:941363097068:web:your-app-id"
     };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
+    const database = getDatabase(app);
 
-    // Auth
-    document.getElementById("signup-btn").onclick = () => {
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
-      createUserWithEmailAndPassword(auth, email, password)
-        .then(() => alert("Signed up!"))
-        .catch(error => alert(error.message));
-    };
+    let currentUser = null;
 
-    document.getElementById("login-btn").onclick = () => {
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
-      signInWithEmailAndPassword(auth, email, password)
-        .then(() => alert("Logged in!"))
-        .catch(error => alert(error.message));
-    };
-
-    document.getElementById("logout-btn").onclick = () => {
-      signOut(auth).then(() => alert("Logged out"));
-    };
-
-    onAuthStateChanged(auth, (user) => {
-      document.getElementById("uploadForm").style.display = user ? "block" : "none";
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        currentUser = user;
+        document.getElementById("uploadForm").style.display = "block";
+      } else {
+        currentUser = null;
+        document.getElementById("uploadForm").style.display = "none";
+      }
     });
 
-    // Post mod
-    document.getElementById("postBtn").onclick = async () => {
-      const nickname = document.getElementById("nickname").value;
+    window.signUp = () => {
+      const email = emailInput.value;
+      const password = passwordInput.value;
+      createUserWithEmailAndPassword(auth, email, password).catch(alert);
+    };
+
+    window.logIn = () => {
+      const email = emailInput.value;
+      const password = passwordInput.value;
+      signInWithEmailAndPassword(auth, email, password).catch(alert);
+    };
+
+    window.logOut = () => signOut(auth);
+
+    window.uploadMod = () => {
       const modName = document.getElementById("modName").value;
       const modDesc = document.getElementById("modDesc").value;
       const gofileLink = document.getElementById("gofileLink").value;
+      const nickname = document.getElementById("nickname").value || "Unknown";
 
-      if (!nickname || !modName || !modDesc || !gofileLink) {
-        alert("Fill everything out.");
-        return;
-      }
+      if (!modName || !gofileLink || !nickname) return alert("Fill all fields");
 
-      try {
-        await addDoc(collection(db, "mods"), {
-          nickname,
-          name: modName,
-          desc: modDesc,
-          url: gofileLink
-        });
-        alert("Mod posted!");
-        loadMods();
-      } catch (err) {
-        alert("Post failed: " + err.message);
-      }
+      const mod = {
+        name: modName,
+        desc: modDesc,
+        link: gofileLink,
+        uploader: nickname
+      };
+
+      push(ref(database, "mods"), mod);
+      sendToDiscord(nickname, currentUser?.email || "unknown", modName, modDesc, gofileLink);
     };
 
-    // Load mods
-    async function loadMods() {
-      const modList = document.getElementById("modList");
-      modList.innerHTML = "";
-      const querySnapshot = await getDocs(collection(db, "mods"));
-      querySnapshot.forEach(doc => {
-        const data = doc.data();
-        const div = document.createElement("div");
-        div.className = "mod-box";
-        div.innerHTML = `
-          <strong>${data.name}</strong><br/>
-          By: ${data.nickname}<br/>
-          <p>${data.desc}</p>
-          <a href="${data.url}" target="_blank" style="color: #ff1a1a;">Download</a>
-        `;
-        modList.appendChild(div);
+    function sendToDiscord(nickname, email, modName, modDesc, gofileLink) {
+      const webhook = "YOUR_DISCORD_WEBHOOK_URL_HERE"; // Replace this
+      const data = {
+        content: `📦 **New Mod Uploaded!**
+**By:** ${nickname}
+**Email:** ${email}
+**Mod Name:** ${modName}
+**Description:** ${modDesc}
+**GoFile Link:** ${gofileLink}`
+      };
+      fetch(webhook, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
       });
     }
 
-    // Load mods on page load
-    loadMods();
+    const modListRef = ref(database, "mods");
+    onValue(modListRef, (snapshot) => {
+      const modList = document.getElementById("modList");
+      modList.innerHTML = "";
+      snapshot.forEach(child => {
+        const mod = child.val();
+        const div = document.createElement("div");
+        div.className = "mod";
+        div.innerHTML = `
+          <strong>${mod.name}</strong><br>
+          By: ${mod.uploader}<br>
+          <p>${mod.desc}</p>
+          <a href="${mod.link}" target="_blank">Download</a>
+        `;
+        modList.appendChild(div);
+      });
+    });
   </script>
 </body>
 </html>
